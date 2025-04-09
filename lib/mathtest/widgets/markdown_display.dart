@@ -3,20 +3,7 @@ import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:flutter_highlight/flutter_highlight.dart';
 import 'package:flutter_highlight/themes/vs2015.dart';
 import 'package:flutter/services.dart';
-
-/// 用于跟踪代码块的类
-class ActiveCodeBlock {
-  String language;
-  String code = '';
-  bool isComplete = false;
-  int startLine;
-  int endLine = -1;
-  
-  ActiveCodeBlock({
-    required this.language,
-    required this.startLine,
-  });
-}
+import '../parsers/code_parser.dart';
 
 /// Markdown显示组件
 class MarkdownDisplay extends StatelessWidget {
@@ -60,35 +47,6 @@ class MarkdownDisplay extends StatelessWidget {
       // 分割成行，以便处理标题等基于行的Markdown元素
       final lines = markdownText.split('\n');
       
-      // 更新现有代码块的内容
-      for (var entry in activeCodeBlocks.entries) {
-        int blockStartLineIndex = entry.value.startLine;
-        int blockStartIndex = entry.key;
-        String blockLanguage = entry.value.language;
-        
-        // 查找结束标记
-        int endLineIndex = -1;
-        String codeContent = '';
-        
-        // 从开始行开始收集代码内容
-        for (int i = blockStartLineIndex + 1; i < lines.length; i++) {
-          if (lines[i].trim() == '```') {
-            endLineIndex = i;
-            entry.value.isComplete = true;
-            entry.value.endLine = i;
-            break;
-          } else {
-            if (codeContent.isNotEmpty) {
-              codeContent += '\n';
-            }
-            codeContent += lines[i];
-          }
-        }
-        
-        // 更新代码内容
-        entry.value.code = codeContent;
-      }
-      
       // 跟踪已处理的代码块行
       Set<int> processedCodeLines = {};
       
@@ -107,32 +65,32 @@ class MarkdownDisplay extends StatelessWidget {
         if (trimmedLine.startsWith('```')) {
           // 找到此代码块的记录
           ActiveCodeBlock? codeBlock;
-          int? blockStartIndex;
           
           for (var entry in activeCodeBlocks.entries) {
             if (entry.value.startLine == lineIndex) {
               codeBlock = entry.value;
-              blockStartIndex = entry.key;
               break;
             }
           }
           
           if (codeBlock != null) {
-            // 提取代码块语言
-            String language = codeBlock.language;
-            
-            // 将代码块的所有行标记为已处理
+            // 标记代码块的所有行为已处理
+            processedCodeLines.add(lineIndex);
             if (codeBlock.isComplete && codeBlock.endLine > lineIndex) {
-              for (int i = lineIndex; i <= codeBlock.endLine; i++) {
+              for (int i = lineIndex + 1; i <= codeBlock.endLine; i++) {
                 processedCodeLines.add(i);
               }
-            } else {
-              // 至少标记开始行为已处理
-              processedCodeLines.add(lineIndex);
+            }
+            
+            // 确保语言标识符是正确提取的（修复）
+            String language = codeBlock.language;
+            if (language.isEmpty && trimmedLine.length > 3) {
+              language = trimmedLine.substring(3).trim();
+              codeBlock.language = language;
             }
             
             // 添加高亮的代码块
-            widgets.add(_buildHighlightedCodeBlock(codeBlock.code, language));
+            widgets.add(_buildHighlightedCodeBlock(codeBlock.code, codeBlock.language));
             
             // 如果代码块已完成，跳过到结束行之后
             if (codeBlock.isComplete) {
@@ -140,53 +98,49 @@ class MarkdownDisplay extends StatelessWidget {
               continue;
             }
           } else {
-            // 如果没找到代码块记录，可能是"输出"部分等特殊标记后的代码块
-            // 检查是否是特殊标记后跟代码块
-            if (lineIndex > 0 && lines[lineIndex - 1].trim().endsWith('：') || 
-                lines[lineIndex - 1].trim().endsWith(':')) {
-              
-              // 提取语言标记
-              String language = '';
-              if (trimmedLine.length > 3) {
-                language = trimmedLine.substring(3).trim();
-              }
-              
-              // 查找结束标记
-              int endIndex = -1;
-              for (int i = lineIndex + 1; i < lines.length; i++) {
-                if (lines[i].trim() == '```') {
-                  endIndex = i;
-                  break;
-                }
-              }
-              
-              if (endIndex != -1) {
-                // 提取代码内容
-                final codeLines = lines.sublist(lineIndex + 1, endIndex);
-                final code = codeLines.join('\n');
-                
-                // 标记所有代码块行为已处理
-                for (int i = lineIndex; i <= endIndex; i++) {
-                  processedCodeLines.add(i);
-                }
-                
-                // 添加高亮的代码块
-                widgets.add(_buildHighlightedCodeBlock(code, language));
-                
-                // 跳过到结束行之后
-                lineIndex = endIndex + 1;
-                continue;
-              }
+            // 如果没找到代码块记录，尝试自动创建一个代码块记录
+            String codeBlockContent = '';
+            String language = '';
+            
+            // 提取代码块语言
+            if (trimmedLine.length > 3) {
+              language = trimmedLine.substring(3).trim();
             }
             
-            // 处理当作普通文本的代码标记
-            _addTextLine(widgets, line);
+            // 查找代码块的结束位置
+            int endIndex = lineIndex + 1;
+            while (endIndex < lines.length && !lines[endIndex].trim().startsWith('```')) {
+              if (endIndex > lineIndex + 1) { // 跳过第一行（语言标识符行）
+                if (codeBlockContent.isEmpty) {
+                  codeBlockContent = lines[endIndex];
+                } else {
+                  codeBlockContent += '\n' + lines[endIndex];
+                }
+              }
+              endIndex++;
+            }
+            
+            // 标记所有代码块行为已处理
+            for (int i = lineIndex; i <= endIndex && i < lines.length; i++) {
+              processedCodeLines.add(i);
+            }
+            
+            // 添加高亮的代码块
+            widgets.add(_buildHighlightedCodeBlock(codeBlockContent, language));
+            
+            // 跳过整个代码块
+            if (endIndex < lines.length && lines[endIndex].trim().startsWith('```')) {
+              lineIndex = endIndex + 1;
+            } else {
+              lineIndex = endIndex;
+            }
+            continue;
           }
           lineIndex++;
           continue;
         }
         
-        // 检查当前行是否在某个代码块内（非开始行）
+        // 检查当前行是否在某个代码块内
         bool isInCodeBlock = false;
         for (var codeBlock in activeCodeBlocks.values) {
           if (lineIndex > codeBlock.startLine && 
@@ -538,9 +492,9 @@ class MarkdownDisplay extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // 语言指示器
+                // 语言指示器 - 不显示纯文本标签
                 Text(
-                  language.isEmpty ? 'code' : language,
+                  (language.isEmpty || language.toLowerCase() == 'plaintext') ? '' : language,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,

@@ -70,7 +70,19 @@ class HomeScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.pushNamed(context, '/latex_screen');
               },
-              child: const Text('LaTeX方程组演示'),
+              child: const Text('模拟AI Markdown 显示'),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MathTest.getFixedMarkdownScreen(),
+                  ),
+                );
+              },
+              child: const Text('固定 Markdown 显示'),
             ),
           ],
         ),

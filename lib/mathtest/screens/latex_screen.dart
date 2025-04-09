@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter/services.dart';
-import 'components/markdown_display.dart';
+import '../widgets/markdown_display.dart' hide ActiveCodeBlock;
+import '../data/content_array.dart' as content_data;
 
 class LatexScreen extends StatefulWidget {
   const LatexScreen({Key? key}) : super(key: key);
@@ -11,51 +12,9 @@ class LatexScreen extends StatefulWidget {
 }
 
 class _LatexScreenState extends State<LatexScreen> {
-  // 原始的Markdown文本，包含LaTeX分隔符
-  final String markdownText = r'''
-# 数学公式展示
-
-以下是方程组的公式块:
-
-\[
-\begin{cases}
-x^2 + y^2 = 25 \\
-x + y = 7
-\end{cases}
-\]
-
-这是一个行内公式 \( y = 7 - x \)，它表示从第二个方程解出的y。
-
-## 解释
-
-上面的方程组是一个联立方程组，包含:
-1. 一个圆方程 $x^2 + y^2 = 25$（半径为5的圆）
-2. 一条直线方程 $x + y = 7$
-
-通过求解这个方程组，我们可以找到圆和直线的交点。
-
-**代码实现**：
-```python
-from sympy import symbols, Eq, solve
-
-# 定义变量
-x, y = symbols('x y')
-
-# 定义方程组
-eq1 = Eq(x**2 + y**2, 25)
-eq2 = Eq(x + y, 7)
-
-# 解方程组
-solutions = solve((eq1, eq2), (x, y))
-print("解为:", solutions)
-```
-
-**输出**：
-```
-解为: [(3, 4), (4, 3)]
-```
-''';
-
+  // 使用contentList作为流式数据源
+  late final List<String> contentList;
+  
   // 当前已经显示的文本
   String displayedText = '';
   // 当前字符索引
@@ -67,13 +26,10 @@ print("解为:", solutions)
   // 控制滚动
   final ScrollController _scrollController = ScrollController();
   
-  // 保存当前活动中的代码块信息
-  Map<int, ActiveCodeBlock> _activeCodeBlocks = {};
-  
   @override
   void initState() {
     super.initState();
-    // 延迟一下再开始输出，让界面先渲染好
+    contentList = content_data.contentList;
     Future.delayed(const Duration(milliseconds: 500), () {
       _startTyping();
     });
@@ -85,44 +41,20 @@ print("解为:", solutions)
     _scrollController.dispose();
     super.dispose();
   }
-  
+
   // 开始逐字输出
   void _startTyping() {
-    // 如果已经在输出或者已经输出完毕，不再处理
-    if (isTyping || currentIndex >= markdownText.length) return;
+    if (isTyping || currentIndex >= contentList.length) return;
     
     isTyping = true;
     
-    // 启动计时器，每50毫秒输出一个字符
     _timer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
-      if (currentIndex < markdownText.length) {
+      if (currentIndex < contentList.length) {
         setState(() {
-          // 添加新字符
-          final newChar = markdownText[currentIndex];
-          displayedText = markdownText.substring(0, currentIndex + 1);
+          displayedText += contentList[currentIndex];
           currentIndex++;
-          
-          // 检查是否遇到代码块开始标记
-          if (newChar == '`' && 
-              currentIndex >= 3 && 
-              markdownText.substring(currentIndex-3, currentIndex) == '```') {
-            
-            // 提取语言标识符
-            String language = '';
-            int lineEndIndex = markdownText.indexOf('\n', currentIndex);
-            if (lineEndIndex > currentIndex) {
-              language = markdownText.substring(currentIndex, lineEndIndex).trim();
-            }
-            
-            // 创建代码块记录
-            _activeCodeBlocks[currentIndex-3] = ActiveCodeBlock(
-              language: language,
-              startLine: displayedText.split('\n').length - 1
-            );
-          }
         });
         
-        // 自动滚动到底部
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_scrollController.hasClients) {
             _scrollController.animateTo(
@@ -133,7 +65,6 @@ print("解为:", solutions)
           }
         });
       } else {
-        // 输出完毕，停止计时器
         timer.cancel();
         setState(() {
           isTyping = false;
@@ -149,7 +80,6 @@ print("解为:", solutions)
       currentIndex = 0;
       _timer?.cancel();
       isTyping = false;
-      _activeCodeBlocks.clear();
     });
   }
   
@@ -177,8 +107,8 @@ print("解为:", solutions)
             onPressed: () {
               _timer?.cancel();
               setState(() {
-                displayedText = markdownText;
-                currentIndex = markdownText.length;
+                displayedText = contentList.join();
+                currentIndex = contentList.length;
                 isTyping = false;
               });
             },
@@ -193,11 +123,11 @@ print("解为:", solutions)
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 使用新组件显示Markdown内容
+              // 使用新组件显示Markdown内容，临时提供空的代码块Map
               MarkdownDisplay(
                 markdownText: displayedText,
                 isTyping: isTyping,
-                activeCodeBlocks: _activeCodeBlocks,
+                activeCodeBlocks: {}, // 临时提供空Map
               ),
               
               // 分隔线
