@@ -6,9 +6,11 @@ enum MarkdownElementType {
   paragraph,  // 段落
   list,       // 列表
   codeBlock,  // 代码块
-  latex,      // LaTeX公式
+  latexBlock, // LaTeX块级公式
+  latexInline,// LaTeX行内公式
   quote,      // 引用
   divider,    // 分隔线
+  image,      // 图片
 }
 
 /// Markdown元素的基础主题配置

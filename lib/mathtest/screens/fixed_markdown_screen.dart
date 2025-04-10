@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../widgets/markdown_display.dart' hide ActiveCodeBlock;
-import '../parsers/code_parser.dart';
+import '../widgets/markdown_display_v2.dart';
 
 class FixedMarkdownScreen extends StatefulWidget {
   const FixedMarkdownScreen({Key? key}) : super(key: key);
@@ -46,6 +45,7 @@ x + y = 7
 1. 从第二个方程解出 \\( y = 7 - x \\)。
 2. 代入第一个方程：\\( x^2 + (7 - x)^2 = 25 \\)。
 3. 展开后解关于 \\( x \\) 的二次方程。
+\\( y = 8 + x \\)
 
 **代码实现**：
 ```python
@@ -99,82 +99,14 @@ print("解为:", solutions)
 3. **唯一解**：方程组可能有多个解、无解或无限解。
 
 如果需要进一步解释或扩展，请随时提问！''';
-
-  // 保存当前活动中的代码块信息
-  Map<int, ActiveCodeBlock> _activeCodeBlocks = {};
   
   // 控制滚动
   final ScrollController _scrollController = ScrollController();
 
   @override
-  void initState() {
-    super.initState();
-    // 解析内容中的代码块
-    _parseContent();
-  }
-  
-  @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
-  }
-
-  // 解析内容中的代码块
-  void _parseContent() {
-    final lines = fixedMarkdown.split('\n');
-    bool inCodeBlock = false;
-    String language = '';
-    int startLine = 0;
-    String codeContent = '';
-    
-    for (int i = 0; i < lines.length; i++) {
-      final line = lines[i];
-      if (line.startsWith('```')) {
-        if (inCodeBlock) {
-          // 代码块结束
-          final codeBlock = ActiveCodeBlock(
-            language: language,
-            startLine: startLine,
-          );
-          codeBlock.code = codeContent;
-          codeBlock.isComplete = true;
-          codeBlock.endLine = i;
-          _activeCodeBlocks[startLine] = codeBlock;
-          
-          inCodeBlock = false;
-          codeContent = '';
-        } else {
-          // 代码块开始
-          inCodeBlock = true;
-          startLine = i;
-          // 提取语言标识符，确保正确获取
-          language = '';
-          if (line.length > 3) {
-            language = line.substring(3).trim();
-          }
-        }
-      } else if (inCodeBlock) {
-        // 在代码块内部
-        if (codeContent.isEmpty) {
-          codeContent = line;
-        } else {
-          codeContent += '\n$line';
-        }
-      }
-    }
-    
-    // 处理未闭合的代码块
-    if (inCodeBlock) {
-      final codeBlock = ActiveCodeBlock(
-        language: language,
-        startLine: startLine,
-      );
-      codeBlock.code = codeContent;
-      // 标记为完成但注意这是未闭合的
-      codeBlock.isComplete = true;
-      codeBlock.endLine = lines.length - 1;
-      _activeCodeBlocks[startLine] = codeBlock;
-    }
   }
   
   @override
@@ -188,10 +120,9 @@ print("解为:", solutions)
         child: SingleChildScrollView(
           controller: _scrollController,
           physics: const ClampingScrollPhysics(),
-          child: MarkdownDisplay(
+          child: MarkdownDisplayV2(
             markdownText: fixedMarkdown,
             isTyping: false,
-            activeCodeBlocks: _activeCodeBlocks,
           ),
         ),
       ),

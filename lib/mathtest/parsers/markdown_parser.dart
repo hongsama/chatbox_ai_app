@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'latex_parser.dart';
-import 'code_parser.dart';
 
 /// 主Markdown解析器
 class MarkdownParser {

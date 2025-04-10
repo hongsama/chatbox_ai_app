@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter/services.dart';
-import '../widgets/markdown_display.dart' hide ActiveCodeBlock;
+import '../widgets/markdown_display_v2.dart';
 import '../data/content_array.dart' as content_data;
 
 class LatexScreen extends StatefulWidget {
@@ -123,11 +123,10 @@ class _LatexScreenState extends State<LatexScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 使用新组件显示Markdown内容，临时提供空的代码块Map
-              MarkdownDisplay(
+              // 使用新组件显示Markdown内容
+              MarkdownDisplayV2(
                 markdownText: displayedText,
                 isTyping: isTyping,
-                activeCodeBlocks: {}, // 临时提供空Map
               ),
               
               // 分隔线

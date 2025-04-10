@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'screens/chat_screen.dart';
 import 'mathtest/index.dart';
+import 'markdown/examples/stream_demo_screen.dart';
 
 void main() {
   // 确保Flutter绑定已初始化
@@ -40,6 +41,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/chat': (context) => const ChatScreen(),
         '/latex_screen': (context) => const LatexScreen(),
+        '/stream_markdown': (context) => const StreamMarkdownDemoScreen(),
       },
     );
   }
@@ -83,6 +85,16 @@ class HomeScreen extends StatelessWidget {
                 );
               },
               child: const Text('固定 Markdown 显示'),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/stream_markdown');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green.shade100,
+              ),
+              child: const Text('流式 Markdown 演示 (新版)'),
             ),
           ],
         ),

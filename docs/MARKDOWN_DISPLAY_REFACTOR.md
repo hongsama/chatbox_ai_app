@@ -79,27 +79,28 @@
   - [x] 创建 `divider_widget.dart`
 - [x] 创建基础组件接口，确保所有渲染组件遵循相同的规范
 
-### 2. 增强 MarkdownDisplay 组件能力
-- [ ] 重构 `markdown_display.dart`，使其成为协调中心
-  - [ ] 实现初步分类逻辑，将文本分解为不同类型的块
+### 2. 修改 fixed_markdown_screen.dart
+- [x] 移除代码块解析逻辑
+  - [x] 删除 `_parseContent` 方法
+  - [x] 删除 `_activeCodeBlocks` 属性及其相关代码
+  - [x] 移除 `initState` 中对 `_parseContent` 的调用
+- [x] 简化 `MarkdownDisplay` 的调用
+  - [x] 移除 `activeCodeBlocks` 参数
+  - [x] 如果有必要，传递配置参数（如字体大小、主题等）
+
+### 3. 增强 MarkdownDisplay 组件能力
+- [x] 创建 `markdown_content_parser.dart`，负责解析Markdown文本
+- [x] 创建 `markdown_display_v2.dart` 作为新版本的协调组件
+- [x] 创建 `markdown_test_screen.dart` 用于测试和对比新旧实现
+- [ ] 完善 `markdown_display_v2.dart`，使其成为协调中心
+  - [ ] 使用 `markdown_content_parser.dart` 解析文本
   - [ ] 为每个块选择合适的渲染组件
   - [ ] 负责处理整体布局和滚动
   - [ ] 处理增量渲染（支持打字效果）
   - [ ] 支持主题和样式的统一配置
 
-### 3. 修改 fixed_markdown_screen.dart
-- [ ] 移除代码块解析逻辑
-  - [ ] 删除 `_parseContent` 方法
-  - [ ] 删除 `_activeCodeBlocks` 属性及其相关代码
-  - [ ] 移除 `initState` 中对 `_parseContent` 的调用
-- [ ] 简化 `MarkdownDisplay` 的调用
-  - [ ] 移除 `activeCodeBlocks` 参数
-  - [ ] 如果有必要，传递配置参数（如字体大小、主题等）
-
 ### 4. 可选：删除 latex_screen.dart
-- [ ] 评估是否需要保留此文件
-- [ ] 如果不需要，直接删除
-- [ ] 如果需要保留，则修改其调用方式，使用新的 `MarkdownDisplay`
+- [x] 修改 `latex_screen.dart` 使用新实现
 
 ### 5. 测试和验证
 - [ ] 测试重构后的显示效果
