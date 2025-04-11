@@ -4,33 +4,21 @@ import '../types/parsing_state.dart';
 
 /// Markdown内容解析器
 /// 
-/// 负责解析Markdown文本内容，识别各种Markdown标记和元素。
-/// 提供一次性解析功能，能够识别文本中的Markdown标记并返回对应的元素类型。
+/// 负责解析Markdown文本内容，识别需要特殊处理的Markdown标记和元素。
+/// 提供一次性解析功能，能够识别文本中的特殊标记并返回对应的元素类型。
 ///
-/// 该解析器能够识别多种Markdown元素类型，包括：
-/// - 标题（H1-H3）
+/// 该解析器能够识别以下需要特殊处理的Markdown元素类型：
 /// - 代码块
-/// - 分隔线
-/// - 引用块
 /// - 数学公式（行内和块级）
 class MarkdownContentParser {
   /// Markdown标记类型定义映射
   /// 
   /// 将Markdown语法标记字符串映射到对应的元素类型
-  /// 例如：'#' 映射到 MarkdownElementType.heading1
+  /// 例如：'```' 映射到 MarkdownElementType.codeBlock
   static const Map<String, MarkdownElementType> _markupTypes = {
-    '###': MarkdownElementType.heading3,
-    '##': MarkdownElementType.heading2,
-    '#': MarkdownElementType.heading1,
     '```': MarkdownElementType.codeBlock,
-    '---': MarkdownElementType.divider,
-    '***': MarkdownElementType.divider,
-    '___': MarkdownElementType.divider,
-    '>': MarkdownElementType.quote,
     '\\[': MarkdownElementType.blockFormulaStart,
     '\\]': MarkdownElementType.blockFormulaEnd,
-    '\\(': MarkdownElementType.inlineFormulaStart,
-    '\\)': MarkdownElementType.inlineFormulaEnd,
   };
   
   /// 直接解析文本
@@ -81,26 +69,14 @@ class MarkdownContentParser {
   /// 元素类型的可读描述
   String _getMarkupTypeDescription(MarkdownElementType type) {
     switch (type) {
-      case MarkdownElementType.heading1:
-        return '一级标题标记';
-      case MarkdownElementType.heading2:
-        return '二级标题标记';
-      case MarkdownElementType.heading3:
-        return '三级标题标记';
+      case MarkdownElementType.text:
+        return '普通文本';
       case MarkdownElementType.codeBlock:
         return '代码块标记';
-      case MarkdownElementType.divider:
-        return '分隔线标记';
-      case MarkdownElementType.quote:
-        return '引用标记';
       case MarkdownElementType.blockFormulaStart:
         return '块级公式开始标记';
       case MarkdownElementType.blockFormulaEnd:
         return '块级公式结束标记';
-      case MarkdownElementType.inlineFormulaStart:
-        return '行内公式开始标记';
-      case MarkdownElementType.inlineFormulaEnd:
-        return '行内公式结束标记';
       default:
         return '未知标记';
     }
@@ -114,7 +90,7 @@ class MarkdownContentParser {
 class ParsedMarkdownElement {
   /// 元素类型
   /// 
-  /// 表示该元素的Markdown类型（如标题、代码块等）
+  /// 表示该元素的Markdown类型（如代码块、公式等）
   final MarkdownElementType type;
   
   /// 元素内容

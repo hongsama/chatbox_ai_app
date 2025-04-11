@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'widgets/markdown_display_v2.dart';
+import 'widgets/markdown_display_v3.dart';
 
 /// 流式Markdown显示组件
 ///
@@ -9,7 +9,7 @@ class StreamMarkdownDisplay extends StatefulWidget {
   final dynamic input;
   
   /// 主题设置
-  final ThemeData? theme;
+  final dynamic theme;
   
   /// 创建流式Markdown显示组件
   const StreamMarkdownDisplay({
@@ -25,8 +25,8 @@ class StreamMarkdownDisplay extends StatefulWidget {
 class _StreamMarkdownDisplayState extends State<StreamMarkdownDisplay> {
   @override
   Widget build(BuildContext context) {
-    // 直接使用V2组件
-    return MarkdownDisplayV2(
+    // 使用V3组件
+    return MarkdownDisplayV3(
       input: widget.input,
       theme: widget.theme,
     );
@@ -38,7 +38,7 @@ class StreamMarkdown {
   /// 返回流式Markdown渲染组件
   static Widget getStreamMarkdownDisplay({
     required dynamic input, // Stream<String>或String类型
-    ThemeData? theme,
+    dynamic theme,
   }) {
     return StreamMarkdownDisplay(
       input: input,

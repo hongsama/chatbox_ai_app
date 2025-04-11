@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'screens/chat_screen.dart';
-import 'mathtest/index.dart';
 import 'markdown/examples/stream_demo_screen.dart';
 
 void main() {
@@ -40,7 +39,6 @@ class MyApp extends StatelessWidget {
       home: const HomeScreen(),
       routes: {
         '/chat': (context) => const ChatScreen(),
-        '/latex_screen': (context) => const LatexScreen(),
         '/stream_markdown': (context) => const StreamMarkdownDemoScreen(),
       },
     );
@@ -68,25 +66,6 @@ class HomeScreen extends StatelessWidget {
               child: const Text('聊天框演示'),
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/latex_screen');
-              },
-              child: const Text('模拟AI Markdown 显示'),
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => MathTest.getFixedMarkdownScreen(),
-                  ),
-                );
-              },
-              child: const Text('固定 Markdown 显示'),
-            ),
-            const SizedBox(height: 8),
             ElevatedButton(
               onPressed: () {
                 Navigator.pushNamed(context, '/stream_markdown');

@@ -6,10 +6,13 @@ library markdown;
 
 import 'package:flutter/material.dart';
 import 'stream_markdown.dart';
+import 'examples/markdown_v3_test_screen.dart';
 
 // 导出主要组件
 export 'stream_markdown.dart';
 export 'widgets/markdown_display_v2.dart';
+export 'widgets/markdown_display_v3.dart';
+export 'examples/markdown_v3_test_screen.dart';
 
 // 导出类型定义
 export 'types/markdown_element_type.dart';
@@ -28,4 +31,9 @@ class StreamMarkdown {
       theme: theme,
     );
   }
+}
+
+/// 获取V3测试页面
+Widget getMarkdownV3TestScreen() {
+  return const MarkdownV3TestScreen();
 } 

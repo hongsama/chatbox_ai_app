@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../types/markdown_element_type.dart';
 import '../parsers/content_parser.dart';
+import 'elements/base_markdown_element.dart';
+import 'elements/text_markdown_element.dart';
+import 'elements/latex_block_markdown_element.dart';
 
-/// MarkdownDisplayV2 组件
+/// MarkdownDisplayV3 组件
 ///
 /// 流式Markdown显示组件，基于标记识别功能。
 /// 该组件可以接收字符串或字符串流作为输入，实时解析并渲染Markdown内容。
@@ -13,7 +16,7 @@ import '../parsers/content_parser.dart';
 /// - 支持流式输入，实时渲染
 /// - 特殊块（如代码块、公式块）的识别和处理
 /// - 基于标记的Markdown元素检测
-class MarkdownDisplayV2 extends StatefulWidget {
+class MarkdownDisplayV3 extends StatefulWidget {
   /// 输入内容，可以是String或Stream<String>
   /// 
   /// 如果是String，组件会一次性渲染全部内容
@@ -27,24 +30,28 @@ class MarkdownDisplayV2 extends StatefulWidget {
   final ThemeData? theme;
   
   /// 创建Markdown显示组件
-  const MarkdownDisplayV2({
+  const MarkdownDisplayV3({
     Key? key,
     required this.input,
     this.theme,
   }) : super(key: key);
 
   @override
-  State<MarkdownDisplayV2> createState() => _MarkdownDisplayV2State();
+  State<MarkdownDisplayV3> createState() => _MarkdownDisplayV3State();
 }
 
-class _MarkdownDisplayV2State extends State<MarkdownDisplayV2> {
-  /// 当前显示的文本
-  /// 保存所有已处理的文本内容
-  String _currentText = '';
-  
+class _MarkdownDisplayV3State extends State<MarkdownDisplayV3> {
   /// 当前检测到的Markdown元素类型
   /// 用于跟踪最后一次检测到的Markdown元素类型
   MarkdownElementType _currentElementType = MarkdownElementType.text;
+  
+  /// 当前创建的BaseMarkdownElement或其子类
+  /// 用于接收文本流
+  BaseMarkdownElement? _currentElement;
+  
+  /// 存储所有Markdown元素的列表
+  /// 按照添加顺序存储，用于UI显示
+  final List<BaseMarkdownElement> _baseList = [];
   
   /// 期望的下一个关闭类型，null表示不在特殊块内
   /// 用于跟踪是否在特殊块内部（如代码块、公式块）
@@ -77,7 +84,7 @@ class _MarkdownDisplayV2State extends State<MarkdownDisplayV2> {
   }
   
   @override
-  void didUpdateWidget(MarkdownDisplayV2 oldWidget) {
+  void didUpdateWidget(MarkdownDisplayV3 oldWidget) {
     super.didUpdateWidget(oldWidget);
     // 当输入源发生变化时，重新处理输入
     if (oldWidget.input != widget.input) {
@@ -100,7 +107,7 @@ class _MarkdownDisplayV2State extends State<MarkdownDisplayV2> {
   /// - 如果是Stream<String>，订阅流并逐块处理
   void _processInput() {
     // 清空旧内容
-    _currentText = '';
+    _currentElement = null;
     _currentElementType = MarkdownElementType.text;
     _expectedCloseType = null;
     
@@ -124,41 +131,55 @@ class _MarkdownDisplayV2State extends State<MarkdownDisplayV2> {
   /// 参数:
   /// - elementType: 要处理的Markdown元素类型
   /// - text: 原始文本内容
-  /// 
-  /// 返回:
-  /// 处理后的文本内容，用于显示
-  String _processMarkdownElement(MarkdownElementType elementType, String text) {
+  void _processMarkdownElement(MarkdownElementType elementType, String text) {
     // 根据元素类型进行特殊处理
     switch (elementType) {
+      case MarkdownElementType.text:
+        // 普通文本处理
+        // 如果当前元素不存在，创建一个新的TextMarkdownElement
+        if (_currentElement == null) {
+          _currentElement = TextMarkdownElement(
+            style: _textStyle,
+          );
+          _baseList.add(_currentElement!);
+        }
+        // 添加到当前元素
+        _currentElement!.appendText(text);
+        break;
       case MarkdownElementType.codeBlock:
         // 判断是开始还是结束
         if (_expectedCloseType != MarkdownElementType.codeBlock) {
           // 设置期望的关闭类型 - 进入代码块模式
           _expectedCloseType = MarkdownElementType.codeBlock;
-          return "``` 代码块开始\n";
+          // 创建新的BaseMarkdownElement
+          _currentElement = BaseMarkdownElement();
+          _baseList.add(_currentElement!);
         } else {
           // 清除期望的关闭类型 - 退出代码块模式
           _expectedCloseType = null;
-          return "代码块结束 ```\n";
+          _currentElement = null;
         }
+        break;
       case MarkdownElementType.blockFormulaStart:
         // 设置期望的关闭类型为blockFormulaEnd - 进入块级公式模式
         _expectedCloseType = MarkdownElementType.blockFormulaEnd;
-        return "\\[ 块级公式开始\n";
+        // 创建新的LaTeXBlockMarkdownElement
+        _currentElement = LaTeXBlockMarkdownElement(
+          style: _textStyle,
+        );
+        _baseList.add(_currentElement!);
+        break;
       case MarkdownElementType.blockFormulaEnd:
         // 清除期望的关闭类型 - 退出块级公式模式
         _expectedCloseType = null;
-        return "块级公式结束 \\]\n";
-      default:
-        // 其他类型（包括text）直接返回原始文本
-        return text;
+        _currentElement = null;
+        break;
     }
   }
   
   /// 处理文本片段
   /// 
   /// 解析输入的文本片段，识别Markdown元素，并更新UI显示
-  /// 根据当前状态（是否在特殊块内）采取不同的处理策略
   /// 
   /// 参数:
   /// - chunk: 要处理的文本片段
@@ -166,36 +187,15 @@ class _MarkdownDisplayV2State extends State<MarkdownDisplayV2> {
     // 进行文本解析，获取Markdown元素信息
     final result = _parser.parseText(chunk);
     
-    // 获取当前元素类型和是否为标记
+    // 获取当前元素类型
     final elementType = result['element'] as MarkdownElementType;
-    final isMarkup = result['isMarkup'] as bool;
     
     // 更新UI
     setState(() {
-      // 如果在特殊块内部（有期望的关闭类型）
-      if (_expectedCloseType != null) {
-        // 只有当解析到的是期望的关闭类型时才进行特殊处理
-        if (isMarkup && elementType == _expectedCloseType) {
-          // 处理特殊块的结束标记
-          _currentText += _processMarkdownElement(elementType, result['text']);
-        } else {
-          // 不是期望的关闭类型，直接添加原始文本，不解析其中的Markdown标记
-          // 这确保了特殊块（如代码块）内部的内容不会被错误解析
-          _currentText += result['text'];
-        }
-      } else {
-        // 不在特殊块内部，正常处理Markdown标记
-        if (!isMarkup) {
-          // 普通文本，直接添加
-          _currentText += result['text'];
-        } else {
-          // Markdown标记，进行特殊处理
-          _currentText += _processMarkdownElement(elementType, result['text']);
-        }
-      }
-      
-      // 最后更新当前元素类型，用于后续处理
+      // 更新当前元素类型
       _currentElementType = elementType;
+      _processMarkdownElement(elementType, result['text']);
+
     });
   }
   
@@ -207,6 +207,16 @@ class _MarkdownDisplayV2State extends State<MarkdownDisplayV2> {
     _streamSubscription = null;
   }
   
+  /// 添加并显示Markdown元素
+  /// 
+  /// 参数:
+  /// - element: 要添加的Markdown元素（BaseMarkdownElement或其子类）
+  void addMarkdownElement(BaseMarkdownElement element) {
+    setState(() {
+      _baseList.add(element);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     // 构建UI，显示解析后的Markdown内容
@@ -228,11 +238,8 @@ class _MarkdownDisplayV2State extends State<MarkdownDisplayV2> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 显示解析后的Markdown内容
-          SelectableText(
-            _currentText,
-            style: _textStyle,
-          ),
+          // 按照顺序显示所有Markdown元素
+          ..._baseList,
         ],
       ),
     );
